@@ -134,20 +134,57 @@ resource "aws_apigatewayv2_integration" "foundation_lambda" {
   payload_format_version = "2.0"
 }
 
+
 resource "aws_apigatewayv2_route" "foundation_route" {
   api_id = aws_apigatewayv2_api.research_api.id
 
   route_key = "POST /research"
 
   target = "integrations/${aws_apigatewayv2_integration.foundation_lambda.id}"
+
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
 }
+
+
+# API Gateway Access Logs
+
+resource "aws_cloudwatch_log_group" "api_access_logs" {
+  name              = "/aws/apigateway/serverless-auth-research-access"
+  retention_in_days = 14
+
+  tags = {
+    Project     = "serverless-auth-research"
+    Environment = "dev"
+    Purpose     = "api-access-logs"
+  }
+}
+
+
 
 resource "aws_apigatewayv2_stage" "default" {
   api_id = aws_apigatewayv2_api.research_api.id
 
   name        = "$default"
   auto_deploy = true
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.api_access_logs.arn
+
+    format = jsonencode({
+      requestId       = "$context.requestId"
+      requestTime     = "$context.requestTime"
+      routeKey        = "$context.routeKey"
+      httpMethod      = "$context.httpMethod"
+      status          = "$context.status"
+      responseLatency = "$context.responseLatency"
+      responseLength  = "$context.responseLength"
+    })
+  }
 }
+
+
+
 
 resource "aws_lambda_permission" "api_gateway" {
   statement_id  = "AllowAPIGatewayInvoke"
@@ -156,4 +193,69 @@ resource "aws_lambda_permission" "api_gateway" {
   principal     = "apigateway.amazonaws.com"
 
   source_arn = "${aws_apigatewayv2_api.research_api.execution_arn}/*/*"
+}
+
+
+# Cognito User Pool - JWT Authentication Baseline
+
+resource "aws_cognito_user_pool" "research_users" {
+  name = "serverless-auth-research-users"
+
+  password_policy {
+    minimum_length                   = 12
+    require_lowercase                = true
+    require_numbers                  = true
+    require_symbols                  = true
+    require_uppercase                = true
+    temporary_password_validity_days = 7
+  }
+
+  admin_create_user_config {
+    allow_admin_create_user_only = true
+  }
+
+  tags = {
+    Project     = "serverless-auth-research"
+    Environment = "dev"
+    Purpose     = "jwt-baseline"
+  }
+}
+
+# Public app client for controlled testing.
+# It has no client secret because it is a public client.
+
+resource "aws_cognito_user_pool_client" "research_client" {
+  name         = "serverless-auth-research-client"
+  user_pool_id = aws_cognito_user_pool.research_users.id
+
+  generate_secret = false
+
+  explicit_auth_flows = [
+    "ALLOW_USER_PASSWORD_AUTH",
+    "ALLOW_REFRESH_TOKEN_AUTH",
+    "ALLOW_USER_SRP_AUTH"
+  ]
+
+  prevent_user_existence_errors = "ENABLED"
+}
+
+
+# JWT Authorizer - Cognito baseline
+
+resource "aws_apigatewayv2_authorizer" "cognito_jwt" {
+  api_id          = aws_apigatewayv2_api.research_api.id
+  name            = "cognito-jwt-authorizer"
+  authorizer_type = "JWT"
+
+  identity_sources = [
+    "$request.header.Authorization"
+  ]
+
+  jwt_configuration {
+    issuer = "https://cognito-idp.${var.aws_region}.amazonaws.com/${aws_cognito_user_pool.research_users.id}"
+
+    audience = [
+      aws_cognito_user_pool_client.research_client.id
+    ]
+  }
 }
