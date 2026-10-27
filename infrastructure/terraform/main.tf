@@ -54,6 +54,7 @@ resource "aws_iam_role" "lambda_foundation_role" {
   }
 }
 
+
 resource "aws_iam_role_policy" "lambda_dynamodb_policy" {
   name = "serverless-auth-foundation-dynamodb-policy"
   role = aws_iam_role.lambda_foundation_role.id
@@ -69,7 +70,19 @@ resource "aws_iam_role_policy" "lambda_dynamodb_policy" {
           "dynamodb:PutItem"
         ]
 
-        Resource = aws_dynamodb_table.research_events.arn
+        Resource = [
+          aws_dynamodb_table.research_events.arn,
+          aws_dynamodb_table.replay_state.arn
+        ]
+      },
+      {
+        Effect = "Allow"
+
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ]
+
+        Resource = "arn:aws:secretsmanager:eu-west-1:608598980797:secret:serverless-auth-dynamic-token-signing-key-*"
       }
     ]
   })
@@ -91,15 +104,16 @@ resource "aws_lambda_function" "foundation" {
   runtime = "python3.12"
   handler = "handler.lambda_handler"
 
-  filename         = "${path.module}/../../backend/foundation/lambda.zip"
-  source_code_hash = filebase64sha256("${path.module}/../../backend/foundation/lambda.zip")
-
-  timeout     = 10
-  memory_size = 128
+  filename         = "${path.module}/../../backend/foundation/lambda-dynamic-auth-candidate.zip"
+  source_code_hash = filebase64sha256("${path.module}/../../backend/foundation/lambda-dynamic-auth-candidate.zip")
+  timeout          = 10
+  memory_size      = 128
 
   environment {
     variables = {
       RESEARCH_EVENTS_TABLE = aws_dynamodb_table.research_events.name
+      REPLAY_STATE_TABLE    = aws_dynamodb_table.replay_state.name
+      SIGNING_SECRET_NAME   = "serverless-auth-dynamic-token-signing-key"
     }
   }
 
@@ -145,6 +159,19 @@ resource "aws_apigatewayv2_route" "foundation_route" {
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
 }
+
+
+resource "aws_apigatewayv2_route" "token_route" {
+  api_id = aws_apigatewayv2_api.research_api.id
+
+  route_key = "POST /token"
+
+  target = "integrations/${aws_apigatewayv2_integration.foundation_lambda.id}"
+
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
+}
+
 
 
 # API Gateway Access Logs
@@ -257,5 +284,30 @@ resource "aws_apigatewayv2_authorizer" "cognito_jwt" {
     audience = [
       aws_cognito_user_pool_client.research_client.id
     ]
+  }
+}
+
+
+
+# DynamoDB table for one-time dynamic-token consumption
+resource "aws_dynamodb_table" "replay_state" {
+  name         = "serverless-auth-replay-state"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "jti"
+
+  attribute {
+    name = "jti"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "expires_at"
+    enabled        = true
+  }
+
+  tags = {
+    Project     = "serverless-auth-research"
+    Purpose     = "Dynamic token replay prevention"
+    Environment = "research"
   }
 }
