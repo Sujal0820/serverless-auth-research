@@ -1,0 +1,22 @@
+{
+  "measurement_scope": "local Python inference wrapper; not AWS Lambda",
+  "model_path": "results\\models\\risk_random_forest.joblib",
+  "warmup_runs": 50,
+  "measured_runs": 1000,
+  "model_file_size_bytes": 21029266,
+  "model_load_ms_separate_measurement": 257.2047,
+  "scorer_initialization_ms_separate_measurement": 116.4183,
+  "per_call_latency_ms": {
+    "mean": 46.6702,
+    "p50": 45.5507,
+    "p95": 55.7182,
+    "p99": 67.5224,
+    "min": 39.9691,
+    "max": 95.9993
+  },
+  "limitations": [
+    "Local measurements depend on this machine and Python environment.",
+    "They exclude API Gateway, network, Lambda startup, and AWS resource overhead.",
+    "They are not directly comparable to client-observed JWT baseline latency."
+  ]
+}
