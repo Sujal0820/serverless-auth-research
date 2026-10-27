@@ -1,0 +1,91 @@
+{
+  "dataset": "datasets\\synthetic\\authentication_events.csv",
+  "rows": 10000,
+  "class_counts": {
+    "0": 7058,
+    "1": 2942
+  },
+  "features": [
+    "request_hour_utc",
+    "hour_deviation",
+    "device_familiarity",
+    "location_deviation_km",
+    "network_reputation",
+    "invocations_last_5m",
+    "invocation_rate_deviation",
+    "function_pattern_deviation",
+    "failed_auth_attempts_10m",
+    "token_age_seconds"
+  ],
+  "excluded_columns": [
+    "event_id",
+    "scenario",
+    "replay_signal",
+    "token_integrity_signal"
+  ],
+  "seed": 42,
+  "test_size": 0.2,
+  "sklearn_version": "1.8.0",
+  "metrics": [
+    {
+      "model": "dummy_most_frequent",
+      "dataset_rows": 10000,
+      "train_rows": 8000,
+      "test_rows": 2000,
+      "seed": 42,
+      "features": "request_hour_utc|hour_deviation|device_familiarity|location_deviation_km|network_reputation|invocations_last_5m|invocation_rate_deviation|function_pattern_deviation|failed_auth_attempts_10m|token_age_seconds",
+      "accuracy": 0.706,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "roc_auc": 0.5,
+      "true_negative": 1412,
+      "false_positive": 0,
+      "false_negative": 588,
+      "true_positive": 0,
+      "sklearn_version": "1.8.0"
+    },
+    {
+      "model": "logistic_regression",
+      "dataset_rows": 10000,
+      "train_rows": 8000,
+      "test_rows": 2000,
+      "seed": 42,
+      "features": "request_hour_utc|hour_deviation|device_familiarity|location_deviation_km|network_reputation|invocations_last_5m|invocation_rate_deviation|function_pattern_deviation|failed_auth_attempts_10m|token_age_seconds",
+      "accuracy": 0.915,
+      "precision": 0.8415032679738562,
+      "recall": 0.8758503401360545,
+      "f1": 0.8583333333333333,
+      "roc_auc": 0.9356788749494129,
+      "true_negative": 1315,
+      "false_positive": 97,
+      "false_negative": 73,
+      "true_positive": 515,
+      "sklearn_version": "1.8.0"
+    },
+    {
+      "model": "random_forest",
+      "dataset_rows": 10000,
+      "train_rows": 8000,
+      "test_rows": 2000,
+      "seed": 42,
+      "features": "request_hour_utc|hour_deviation|device_familiarity|location_deviation_km|network_reputation|invocations_last_5m|invocation_rate_deviation|function_pattern_deviation|failed_auth_attempts_10m|token_age_seconds",
+      "accuracy": 0.9505,
+      "precision": 0.96045197740113,
+      "recall": 0.8673469387755102,
+      "f1": 0.9115281501340483,
+      "roc_auc": 0.9379197500529957,
+      "true_negative": 1391,
+      "false_positive": 21,
+      "false_negative": 78,
+      "true_positive": 510,
+      "sklearn_version": "1.8.0"
+    }
+  ],
+  "limitations": [
+    "Labels are derived from synthetic scenarios.",
+    "Performance does not establish real-world attack-detection accuracy.",
+    "The random split may place similar simulated patterns in train and test.",
+    "Scenario-wise results should be reviewed for generalisation weaknesses."
+  ]
+}

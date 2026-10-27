@@ -33,3 +33,5 @@ response.json
 # OS
 .DS_Store
 Thumbs.db
+# Generated ML model artifacts
+results/models/
